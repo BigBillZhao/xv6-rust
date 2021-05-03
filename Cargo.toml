@@ -11,9 +11,4 @@ edition = "2018"
 bit_field = "0.10.0"
 bitflags = "1.2.1"
 array-macro = "=2.0.0"
-
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-panic = "abort"
+spin = "0.4.9"
