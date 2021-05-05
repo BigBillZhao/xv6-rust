@@ -7,6 +7,7 @@ pub unsafe fn rust_main() -> ! {
         crate::console::console_init();
         println!();
         println!("hello world");
+        crate::memory::kalloc::kinit();
         panic!();
     } else {
         

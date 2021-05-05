@@ -27,3 +27,4 @@ mod console;
 mod register;
 mod rmain;
 mod start;
+mod memory;
