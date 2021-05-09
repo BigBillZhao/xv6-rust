@@ -17,7 +17,7 @@ fn kvminithart(){
 
 /// the 'core' of the `vm`
 /// the return type, and argument pagetable, va are the addresses, used as a pointer
-fn walk(pagetable: usize, va: usize) -> usize{
+fn walk(pagetable: usize, va: usize, alloc: bool) -> usize{
 
 }
 
@@ -103,6 +103,12 @@ fn uvmclear(pagetable: usize, va: usize){
 
 }
 
-fn copyout()
-fn copyin()
-fn copyinstr()
+fn copyout(pagetable: usize, dstva: usize, src: usize, len: usize)-> bool{
+
+}
+fn copyin(pagetable: usize, dst: usize, srcva: usize, len: usize)-> bool{
+
+}
+fn copyinstr(pagetable: usize, dst: usize, srcva: usize, max: usize)-> bool{
+
+}
