@@ -45,7 +45,7 @@ pub unsafe fn kalloc() -> usize {
     KMEM.lock()._kalloc()
 }
 
-fn round_up(pa: usize) -> usize {
+pub fn round_up(pa: usize) -> usize {
     if pa % PGSIZE != 0 {
         ((pa / PGSIZE) + 1) * PGSIZE
     } else {
