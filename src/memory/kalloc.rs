@@ -61,7 +61,7 @@ pub unsafe fn kinit(){
     KMEM.lock().END = end as usize;
     let pa_start = KMEM.lock().END;
     let pa_end = PHYSTOP;
-    println!("KernelHeap: available physical memory [{:#x}, {:#x})", end,pa_end);
+    println!("KernelHeap: available physical memory [{:#x}, {:#x})", end, pa_end);
     let pa_start = round_up(pa_start);
     let mut iter = pa_start;
     while iter < pa_end {

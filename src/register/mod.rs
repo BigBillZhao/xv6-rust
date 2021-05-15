@@ -29,6 +29,10 @@ pub mod mideleg {
         llvm_asm!("csrw mideleg, $0"::"r"(mideleg)::"volatile");
     }
 }
+/// r/w satp
+/// supervisor address translation and protection;
+/// holds the address of the page table.
+/// used in vm.rs
 pub mod satp{
     //! satp register
     pub fn read() -> usize {
@@ -90,4 +94,10 @@ pub mod tp {
     pub unsafe fn write(tp: usize) {
         llvm_asm!("mv tp, $0"::"r"(tp)::"volatile");
     }
+}
+/// flush the TLB.
+/// used in vm.rs
+pub unsafe fn sfence_vma() {
+    // the zero, zero means flush all TLB entries.
+    llvm_asm!("sfence.vma zero, zero"::::"volatile");
 }
