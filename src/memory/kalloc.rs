@@ -1,72 +1,103 @@
-use spin::Mutex;
-use core::ptr;
 use crate::consts::{PGSIZE, PHYSTOP};
 
-struct Kmem{
-    freelist: usize,
-    END: usize,
-}
+#[global_allocator]
+static ALLOCATOR: Locked<BumpAllocator> = Locked::new(BumpAllocator::new());
+// static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-impl Kmem{
-    fn _kfree(&mut self, pa: usize){
-        if pa % PGSIZE != 0 {
-            panic!();
-        }
-        if pa < self.END {
-            panic!();
-        }
-        if pa >= PHYSTOP {
-            panic!();
-        }
-        let pa_ptr = pa as *mut usize;
-        unsafe{
-            ptr::write_volatile(pa_ptr, self.freelist);
-        }
-        self.freelist = pa;
-    }
-
-    fn _kalloc(&mut self) -> usize{
-        let p_rtn = self.freelist;
-        let pa = p_rtn as * const usize;
-        self.freelist = unsafe{
-            ptr::read_volatile(pa)
-        };
-        p_rtn
-    }
-}
-
-static mut KMEM: Mutex<Kmem> = Mutex::new(Kmem{freelist:0, END:0});
-
-pub unsafe fn kfree(pa: usize){
-    KMEM.lock()._kfree(pa);
-}
-
-pub unsafe fn kalloc() -> usize {
-    KMEM.lock()._kalloc()
-}
-
-pub fn round_up(pa: usize) -> usize {
-    if pa % PGSIZE != 0 {
-        ((pa / PGSIZE) + 1) * PGSIZE
-    } else {
-        pa
-    }
-}
-
-pub unsafe fn kinit(){
+pub fn kinit(){
     extern "C" {
         fn end();
     }
-    let end = end as usize;
-    KMEM.lock().END = end as usize;
-    let pa_start = KMEM.lock().END;
-    let pa_end = PHYSTOP;
-    println!("KernelHeap: available physical memory [{:#x}, {:#x})", end, pa_end);
-    let pa_start = round_up(pa_start);
-    let mut iter = pa_start;
-    while iter < pa_end {
-        kfree(iter);
-        iter = iter + PGSIZE;
+    let heap_start = end as usize;
+    let heap_size = PHYSTOP - heap_start;
+    unsafe {
+        ALLOCATOR.lock().init(heap_start, heap_size);
     }
+}
+
+#[alloc_error_handler]
+fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
+    panic!("allocation error: {:?}", layout)
+}
+
+pub struct BumpAllocator {
+    heap_start: usize,
+    heap_end: usize,
+    next: usize,
+    allocations: usize,
+}
+
+impl BumpAllocator {
+    /// Creates a new empty bump allocator.
+    pub const fn new() -> Self {
+        BumpAllocator {
+            heap_start: 0,
+            heap_end: 0,
+            next: 0,
+            allocations: 0,
+        }
+    }
+
+    /// Initializes the bump allocator with the given heap bounds.
+    ///
+    /// This method is unsafe because the caller must ensure that the given
+    /// memory range is unused. Also, this method must be called only once.
+    pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
+        self.heap_start = heap_start;
+        self.heap_end = heap_start + heap_size;
+        self.next = heap_start;
+    }
+}
+
+pub struct Locked<A> {
+    inner: spin::Mutex<A>,
+}
+
+impl<A> Locked<A> {
+    pub const fn new(inner: A) -> Self {
+        Locked {
+            inner: spin::Mutex::new(inner),
+        }
+    }
+
+    pub fn lock(&self) -> spin::MutexGuard<A> {
+        self.inner.lock()
+    }
+}
+
+use alloc::alloc::{GlobalAlloc, Layout};
+use core::ptr;
+
+unsafe impl GlobalAlloc for Locked<BumpAllocator> {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        let mut bump = self.lock(); // get a mutable reference
+
+        let alloc_start = align_up(bump.next, layout.align());
+        let alloc_end = match alloc_start.checked_add(layout.size()) {
+            Some(end) => end,
+            None => return ptr::null_mut(),
+        };
+
+        if alloc_end > bump.heap_end {
+            ptr::null_mut() // out of memory
+        } else {
+            bump.next = alloc_end;
+            bump.allocations += 1;
+            alloc_start as *mut u8
+        }
+    }
+
+    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
+        let mut bump = self.lock(); // get a mutable reference
+
+        bump.allocations -= 1;
+        if bump.allocations == 0 {
+            bump.next = bump.heap_start;
+        }
+    }
+}
+
+fn align_up(addr: usize, align: usize) -> usize {
+    (addr + align - 1) & !(align - 1)
 }
 
