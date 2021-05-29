@@ -1,6 +1,10 @@
 use crate::register::stvec;
 use crate::register::{sstatus,scause,sepc};
 use crate::proc::{ProcState,my_proc_index,yield_proc,proc_list};
+use spin::Mutex;
+
+static TICKS: Mutex<usize> = Mutex::new(0);
+
 pub unsafe fn trap_init_hart() {
     // in kernelvec.S, calls kerneltrap().
     // refered in trapinithalt and usertrap
@@ -51,9 +55,11 @@ pub unsafe extern "C" fn kerneltrap() {
     sstatus::write(sstatus);
 }
 
-// !!! not inplemented corresponding initialization in `start.c`
 fn clockintr () {
-
+    let mut _ticks = *(TICKS.lock());
+    println!("timer interrupt tick = {}", _ticks);
+    _ticks += 1;
+    drop(_ticks);
 }
 
 // check if it's an external interrupt or software interrupt,
@@ -62,5 +68,5 @@ fn clockintr () {
 // 1 if other device,
 // 0 if not recognized.
 fn devintr() -> usize {
-    0
+    2
 }

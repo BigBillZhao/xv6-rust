@@ -37,6 +37,9 @@ pub const VIRTIO0_IRQ: usize = 1;
 // #define CLINT_MTIMECMP(hartid) (CLINT + 0x4000 + 8*(hartid))
 // #define CLINT_MTIME (CLINT + 0xBFF8) // cycles since boot.
 pub const CLINT: usize = 0x2000000;
+pub const CLINT_MAP_SIZE: usize = 0x10000;
+pub const CLINT_MTIMECMP: usize = CLINT + 0x4000;
+pub const CLINT_MTIME: usize = CLINT + 0xbff8;
 
 /// qemu puts platform-level interrupt controller (PLIC) here.
 // not implemented

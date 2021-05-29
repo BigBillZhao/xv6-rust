@@ -1,15 +1,9 @@
 pub mod startup;
 pub mod sstatus;
-pub mod mstatus{
-    pub unsafe fn read() -> usize {
-        let ret: usize;
-        llvm_asm!("csrr $0, mstatus":"=r"(ret):::"volatile");
-        ret
-    }
-    pub unsafe fn write(x: usize) {
-        llvm_asm!("csrw mstatus, $0"::"r"(x)::"volatile");
-    }
-}
+pub mod clint;
+pub mod mie;
+pub mod mstatus;
+
 /// mepc
 pub mod mepc {
     pub unsafe fn write(mepc: usize) {
@@ -30,6 +24,7 @@ pub mod mideleg {
         llvm_asm!("csrw mideleg, $0"::"r"(mideleg)::"volatile");
     }
 }
+
 /// r/w satp
 /// supervisor address translation and protection;
 /// holds the address of the page table.
@@ -50,6 +45,7 @@ pub mod satp{
     }
 
 }
+
 pub mod sie{
     //! sie register
 
@@ -76,6 +72,7 @@ pub mod sie{
 
 
 }
+
 /// mhartid
 pub mod mhartid {
     pub unsafe fn read() -> usize {
@@ -84,6 +81,7 @@ pub mod mhartid {
         ret
     }
 }
+
 /// tp
 pub mod tp {
     pub unsafe fn read() -> usize {
@@ -125,5 +123,17 @@ pub mod sepc {
 
     pub fn write(sepc: usize) {
         unsafe {llvm_asm!("csrw sepc, $0"::"r"(sepc)::"volatile");}
+
+/// mscratch
+pub mod mscratch {
+    pub unsafe fn write(mscratch: usize) {
+        llvm_asm!("csrw mscratch, $0"::"r"(mscratch)::"volatile");
+    }
+}
+
+/// mtvec
+pub mod mtvec {
+    pub unsafe fn write(mtvec: usize) {
+        llvm_asm!("csrw mtvec, $0"::"r"(mtvec)::"volatile");
     }
 }
