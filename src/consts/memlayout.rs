@@ -49,6 +49,7 @@ pub const CLINT: usize = 0x2000000;
 pub const PLIC: usize = 0x0c000000;
 pub const PLIC_PRIORITY: usize = PLIC + 0x0;
 pub const PLIC_PENDING: usize = PLIC + 0x1000;
+pub const PLIC_SIZE: usize = 0x400000;
 
 /// the kernel expects there to be RAM
 /// for use by the kernel and user pages
