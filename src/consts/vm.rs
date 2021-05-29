@@ -38,3 +38,5 @@ pub const MAXVA: usize = 1 << (9 + 9 + 9 + 12 - 1);
 // SATP_SV39 = (8L << 60)
 pub const SATP_SV39: usize = 8 << 60;
 // pub const SATP_SV39: usize = 0b1000_0000000000_0000000000_0000000000_0000000000_0000000000_0000000000;
+
+pub const SV39FLAGLEN: usize = 10;
