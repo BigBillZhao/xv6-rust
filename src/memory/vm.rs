@@ -6,7 +6,7 @@ use crate::consts::USIZELEN;
 
 use crate::register;
 use super::*;
-use crate::proc;
+use crate::proc::proc;
 use core::ptr;
 use crate::memory::kalloc::{kfree,kalloc,round_up};
 
@@ -120,7 +120,7 @@ unsafe fn walkaddr(pagetable: usize, va: usize) -> usize{
 }
 
 /// a wrapper for the mappages, specifically for kernel page table `kpgtbl` parameter
-unsafe fn kvmmap(kpgtbl:usize, va: usize, pa: usize, size: usize, perm: usize){
+pub unsafe fn kvmmap(kpgtbl:usize, va: usize, pa: usize, size: usize, perm: usize){
     if mappages(kpgtbl, va, size, pa, perm) == false {
         panic!();
     }
@@ -187,15 +187,15 @@ unsafe fn uvmunmap(pagetable: usize, va: usize, npages:usize, do_free:bool){
         //1L <<0 :                  PTE_V
         //(pte_value) & 0x3FF :     PTE_FLAGS
         //(((pte_value) >> 10) << 12):    PTE2PA
-        if (pte_value & (1 << 0))==0 {
+        if (pte_value & PTE_V)==0 {
             panic!("uvmunmap: not mapped")
         }
         //  check leaf
-        if (pte_value) & 0x3FF == (1 << 0) {
+        if PTE_FLAGS(pte_value)==0 {
             panic!("uvmunmap: not a leaf");
         }
         if do_free {
-            let pa=(((pte_value) >> 10) << 12);
+            let pa=PTE2PA(pte_value);
             unsafe{
                 kfree(pa)
             };
@@ -233,7 +233,7 @@ unsafe fn uvminit(pagetable: usize, src: usize, sz: usize){
     // can choose to add a memset here
     //PTE_W|PTE_R|PTE_X|PTE_U
     //(1L << 2)|(1L << 1)|(1L << 3)|(1L << 4)
-    mappages(pagetable, 0, PGSIZE, mem, (0b1111 << 1));
+    mappages(pagetable, 0, PGSIZE, mem,PTE_W|PTE_R|PTE_X|PTE_U);
     //use memmove to move the src code to the address
     //memmove(mem, src, sz);
     //pub unsafe fn copy<T>(src: *const T, dst: *mut T, count: usize)
@@ -246,7 +246,7 @@ unsafe fn uvminit(pagetable: usize, src: usize, sz: usize){
 // Allocate PTEs and physical memory to grow process from oldsz to
 // newsz, which need not be page aligned.  Returns new size or 0 on error.
 /// may be return a bool on success is better (result)
-unsafe fn uvmalloc(pagetable: usize, oldsz: usize, newsz: usize) -> usize{
+pub unsafe fn uvmalloc(pagetable: usize, oldsz: usize, newsz: usize) -> usize{
 
     if newsz < oldsz{
         return oldsz;
@@ -265,7 +265,7 @@ unsafe fn uvmalloc(pagetable: usize, oldsz: usize, newsz: usize) -> usize{
         // can add a memset here
         //PTE_W|PTE_R|PTE_X|PTE_U
         //(1L << 2)|(1L << 1)|(1L << 3)|(1L << 4)
-        if mappages(pagetable, a, PGSIZE, mem, (0b1111 << 1)){
+        if mappages(pagetable, a, PGSIZE, mem, PTE_W|PTE_R|PTE_X|PTE_U){
             unsafe{
                 kfree(mem);
             }
@@ -278,7 +278,7 @@ unsafe fn uvmalloc(pagetable: usize, oldsz: usize, newsz: usize) -> usize{
 }
 
 /// the inverse operation of uvmalloc
-unsafe fn uvmdealloc(pagetable: usize, oldsz: usize, newsz: usize) -> usize{
+pub unsafe fn uvmdealloc(pagetable: usize, oldsz: usize, newsz: usize) -> usize{
     if newsz >= oldsz {
         return oldsz;
     }
@@ -311,7 +311,7 @@ unsafe fn uvmfree(pagetable: usize, sz: usize){
 /// copy the physical memory of a parent process to a child process in fork
 /// copy src start from addr. `0` by `sz` length and dst. start at `0` as well
 /// will have return true if success, return false if have error
-unsafe fn uvmcopy(old: usize, new: usize, sz: usize) -> bool {
+pub unsafe fn uvmcopy(old: usize, new: usize, sz: usize) -> bool {
     let mut i = 0;
     while i < sz{
         let pte = walk(old, i, false);
@@ -322,13 +322,13 @@ unsafe fn uvmcopy(old: usize, new: usize, sz: usize) -> bool {
             ptr::read_volatile(pte as * const usize)
         };
         //1L <<0 : PTE_V
-        if (pte_value & (1 <<0)) == 0{
+        if (pte_value & PTE_V) == 0{
             panic!("uvmcopy: page not present");
         }
         //(((pte_value) >> 10) << 12):    PTE2PA
-        let pa = (((pte_value) >> 10) << 12);
+        let pa = PTE2PA(pte_value);
         //(pte_value) & 0x3FF :     PTE_FLAGS
-        let flags = (pte_value) & 0x3FF;
+        let flags = PTE_FLAGS(pte_value);
         let mem = unsafe{
             kalloc()
         };
@@ -368,7 +368,7 @@ unsafe fn uvmclear(pagetable: usize, va: usize){
     unsafe{
         // PTE_U
         //*pte &= ~PTE_U;
-        ptr::write_volatile(pte as * mut usize,pte_value & (!(1 << 4)));
+        ptr::write_volatile(pte as * mut usize,pte_value &!PTE_U);
     }
     
 }

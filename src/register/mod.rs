@@ -1,4 +1,5 @@
 pub mod startup;
+pub mod sstatus;
 pub mod mstatus{
     pub unsafe fn read() -> usize {
         let ret: usize;
