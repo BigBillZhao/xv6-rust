@@ -2,17 +2,20 @@ use crate::consts::{PGSIZE, PHYSTOP};
 
 #[global_allocator]
 static ALLOCATOR: Locked<BumpAllocator> = Locked::new(BumpAllocator::new());
-// static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 pub fn kinit(){
     extern "C" {
         fn end();
     }
     let heap_start = end as usize;
+    let heap_start = align_up(heap_start, PGSIZE);
     let heap_size = PHYSTOP - heap_start;
     unsafe {
         ALLOCATOR.lock().init(heap_start, heap_size);
     }
+    println!("kinit succesful with start {:#x} and size {:#x}",
+        heap_start, heap_size
+    );
 }
 
 #[alloc_error_handler]
@@ -72,7 +75,8 @@ unsafe impl GlobalAlloc for Locked<BumpAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let mut bump = self.lock(); // get a mutable reference
 
-        let alloc_start = align_up(bump.next, layout.align());
+        // let alloc_start = align_up(bump.next, layout.align());
+        let alloc_start = align_up(bump.next, PGSIZE);
         let alloc_end = match alloc_start.checked_add(layout.size()) {
             Some(end) => end,
             None => return ptr::null_mut(),
