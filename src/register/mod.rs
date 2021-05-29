@@ -123,7 +123,8 @@ pub mod sepc {
 
     pub fn write(sepc: usize) {
         unsafe {llvm_asm!("csrw sepc, $0"::"r"(sepc)::"volatile");}
-
+}
+}
 /// mscratch
 pub mod mscratch {
     pub unsafe fn write(mscratch: usize) {
