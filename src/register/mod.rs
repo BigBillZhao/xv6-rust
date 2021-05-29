@@ -103,3 +103,27 @@ pub mod stvec {
         llvm_asm!("csrw stvec, $0"::"r"(stvec)::"volatile");
     }
 }
+pub mod scause{
+    #[inline]
+    pub unsafe fn read() -> usize {
+        let ret: usize;
+        unsafe {llvm_asm!("csrr $0, scause":"=r"(ret):::"volatile");}
+        ret
+    }
+
+}
+/// sepc
+/// machine exception program counter, holds the
+/// instruction address to which a return from
+/// exception will go.(from xv6-riscv)
+pub mod sepc {
+    pub fn read() -> usize {
+        let ret: usize;
+        unsafe {llvm_asm!("csrr $0, sepc":"=r"(ret):::"volatile");}
+        ret
+    }
+
+    pub fn write(sepc: usize) {
+        unsafe {llvm_asm!("csrw sepc, $0"::"r"(sepc)::"volatile");}
+    }
+}

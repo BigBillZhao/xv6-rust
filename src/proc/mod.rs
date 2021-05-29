@@ -14,11 +14,10 @@ use crate::register::tp;
 use crate::consts::{NPROC, NCPU,PGSIZE};
 
 static next_pid: Mutex<isize> = spin::Mutex::new(0);
-static mut proc_list: [Proc; NPROC] = array![_ => Proc::new(); NPROC];
+pub static mut proc_list: [Proc; NPROC] = array![_ => Proc::new(); NPROC];
 static mut cpu_list: [Cpu; NCPU] = array![_ => Cpu::new(); NCPU];
 
-
-enum ProcState{ UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE }
+pub enum ProcState{ UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE }
 
 pub struct Proc {
     lock: spin::Mutex<bool>,
@@ -66,6 +65,9 @@ impl Proc {
         self.context.clear();
         self.pagetable= ptr::null_mut();
     }
+    pub fn get_state(&self)->&ProcState{
+        &self.state
+    }
 }
 
 
@@ -90,7 +92,7 @@ unsafe fn my_cpu_index() -> usize {
 
 /// Return the current process's index
 /// -1 if none
-unsafe fn my_proc_index() -> isize {
+pub unsafe fn my_proc_index() -> isize {
     push_off();
     let index = cpu_list[my_cpu_index()].get_proc_index();
     pop_off();
@@ -129,5 +131,8 @@ unsafe fn alloc_proc_index() -> isize {
 // A fork child's very first scheduling by scheduler()
 // will swtch to forkret.
 fn forkret() {
+
+}
+pub fn yield_proc(){
 
 }
