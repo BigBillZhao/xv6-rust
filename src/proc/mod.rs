@@ -1,12 +1,15 @@
 pub mod context;
+pub mod cpu;
 
 use spin::Mutex;
 use array_macro::array;
 use core::ptr;
 
 use context::Context;
-use crate::memory::{KSTACK, addr::VirtualAddr, addr::Addr};
-use crate::register::{tp, sstatus};
+use alloc::boxed::Box;
+use cpu::{Cpu,push_off,pop_off};
+use crate::memory::{KSTACK, addr::VirtualAddr, addr::Addr, uvmfree, uvmcreate, pagetable::PageTable};
+use crate::register::tp;
 
 use crate::consts::{NPROC, NCPU,PGSIZE};
 
@@ -21,8 +24,10 @@ pub struct Proc {
     lock: spin::Mutex<bool>,
     kstack: VirtualAddr,
     state: ProcState,
+    sz: usize,
     pid: isize,
     context: Context,
+    pagetable: * mut PageTable,
 }
 
 impl Proc {
@@ -32,59 +37,37 @@ impl Proc {
             lock: spin::Mutex::new(false),
             kstack: VirtualAddr::from(0),
             pid: -1,
+            sz: 0,
             context: Context::new(),
+            pagetable: ptr::null_mut(),
         }
     }
 
     pub fn set_kstack(&mut self, addr: VirtualAddr) {
         self.kstack = addr;
     }
-}
-
-pub struct Cpu {
-    proc_index: isize,
-    noff: usize,
-    intena: bool,
-    scheduler: Context,
-}
-
-impl Cpu {
-    pub const fn new() -> Cpu {
-        Cpu {
-            proc_index: -1,
-            scheduler: Context::new(),
-            noff: 0,
-            intena: false,
-        }
+    pub unsafe fn generate_pagetable(&mut self){
+        let pagetable: Box<PageTable>= uvmcreate();
+        // TODO trapoline 
+        //TODO trapframe
+        self.pagetable = Box::into_raw(pagetable);
+    }
+    pub unsafe fn freepagetable(&mut self){
+        //TODO trampoline uvmunmap();
+        //TODO trapframe uvmunmap();
+        uvmfree(&mut *self.pagetable, self.sz);
+    }
+    pub unsafe fn freeproc(&mut self){
+        self.state= ProcState::UNUSED;
+        self.lock= spin::Mutex::new(false);
+        self.kstack.set(0);
+        self.pid= -1;
+        self.sz= 0;
+        self.context.clear();
+        self.pagetable= ptr::null_mut();
     }
 }
 
-/// push_off/pop_off are like intr_off()/intr_on() except that they are matched:
-/// it takes two pop_off()s to undo two push_off()s.  Also, if interrupts
-/// are initially off, then push_off, pop_off leaves them off.
-unsafe fn push_off() {
-    let old = sstatus::intr_get();
-    sstatus::intr_off();
-    let cpu_index = my_cpu_index();
-    if cpu_list[cpu_index].noff == 0 {
-        cpu_list[cpu_index].intena = old;
-    }
-    cpu_list[cpu_index].noff +=1 ;
-}
-
-unsafe fn pop_off() {
-    let cpu_index = my_cpu_index();
-    if sstatus::intr_get() {
-        panic!("pop_off(): interruptable");
-    }
-    if cpu_list[cpu_index].noff < 1 {
-        panic!("pop_off(): count not match");
-    }
-    cpu_list[cpu_index].noff -= 1;
-    if cpu_list[cpu_index].noff == 0 && cpu_list[cpu_index].intena {
-        sstatus::intr_on();
-    }
-}
 
 pub unsafe fn proc_init() {
     let mut index: usize = 0;
@@ -110,7 +93,7 @@ unsafe fn my_cpu_index() -> usize {
 /// -1 if none
 unsafe fn my_proc_index() -> isize {
     push_off();
-    let index = cpu_list[my_cpu_index()].proc_index;
+    let index = cpu_list[my_cpu_index()].get_proc_index();
     pop_off();
     index
 }
@@ -125,13 +108,14 @@ fn alloc_pid() -> isize {
 unsafe fn alloc_proc_index() -> isize {
     let mut count : isize = 0;
     for proc_iter in proc_list.iter_mut() {
-        let raii = proc_iter.lock.lock();
+        //consider to add a lock here
+        //let raii = proc_iter.lock.lock();
         match proc_iter.state{
             ProcState::UNUSED =>{
                 proc_iter.pid = alloc_pid();
                 proc_iter.state = ProcState::USED;
                 // TODO : add trapframe
-                // TODO : page table
+                proc_iter.generate_pagetable();
                 proc_iter.context.set_ra(forkret as *const () as usize);
                 proc_iter.context.set_sp(*proc_iter.kstack.add(PGSIZE).get_self());
                 return count;

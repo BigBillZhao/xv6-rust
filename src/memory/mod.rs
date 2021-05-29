@@ -107,6 +107,61 @@ unsafe fn walk_alloc(pagetable: &mut PageTable, va: VirtualAddr) -> * mut PTE {
     panic!();
 }
 
+unsafe fn walk_free(pagetable: &mut PageTable, va: VirtualAddr) -> * mut PTE {
+    let mut pgt = pagetable as * mut PageTable;
+    for level in (0..3).rev() {
+        let ppte: * mut PTE  = va.resolve_level(pgt, level);
+        if level == 0 {
+            return ppte
+        }
+        if ! (*ppte).is_valid() {
+            panic!();
+        } else {
+            pgt = (*ppte).to_pagetable();
+        }
+    }
+    panic!();
+}
+
 pub fn KSTACK(p: usize) -> usize{
     TRAMPOLINE - ((p + 1) * 2 * PGSIZE)
+}
+
+unsafe fn uvmunmap(
+    pagetable: &mut PageTable, va: VirtualAddr, npages: usize, do_free: bool
+) {
+    if ! va.is_aligned() {
+        panic!();
+    }
+    let mut va_iter = va;
+    let mut cnt = 0;
+    while cnt < npages {
+        let ppte: * mut PTE = walk_free(pagetable, va_iter);
+        if ! (*ppte).is_valid() {
+            panic!();
+        }
+        if do_free {
+            let ppa = (*ppte).to_pa().get() as * mut PageTable;
+            drop(Box::from_raw(ppa));
+        }
+        (*ppte).set(0);
+        va_iter = va_iter.add(PGSIZE);
+        cnt += 1;
+    }
+}
+
+pub unsafe fn uvmfree(pagetable: &mut PageTable, size: usize) {
+    if size > 0 {
+        let va = VirtualAddr::from(0);
+        uvmunmap(
+            pagetable, va, va.add(size).round_up() / PGSIZE, true
+        );
+    }
+    pagetable.recursive_free();
+}
+
+pub unsafe fn uvmcreate() -> Box<PageTable> {
+    // let pagetable: Box<PageTable> = Box::new_zeroed().assume_init();
+    // pagetable
+    Box::<PageTable>::new_zeroed().assume_init()
 }

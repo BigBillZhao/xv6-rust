@@ -24,19 +24,21 @@ impl PTE {
     pub fn from_pa(pa: PhysAddr, perm: PteFlag) -> PTE {
         PTE((pa.get_self() >> 12) << 10 | perm.bits())
     }
-
     pub fn to_pa(&self) -> PhysAddr {
         PhysAddr((self.0 >> SV39FLAGLEN) << PGSHIFT)
     }
-
     pub fn to_pagetable(&self) -> * mut PageTable {
         ((self.0 >> SV39FLAGLEN) << PGSHIFT) as * mut PageTable
     }
-
     pub fn is_valid(&self) -> bool {
         (self.0 & PteFlag::V.bits()) > 0
     }
-
+    pub fn get(&self) -> usize {
+        self.0
+    }
+    pub fn set(&mut self, val: usize) {
+        self.0 = val;
+    }
 }
 
 pub trait Addr {
@@ -48,6 +50,9 @@ pub trait Addr {
     }
     fn round_down(&self) -> usize {
         self.get_self() & !(PGSIZE - 1)
+    }
+    fn is_aligned(&self) -> bool {
+        self.get_self() % PGSIZE == 0
     }
 }
 
@@ -70,6 +75,9 @@ impl PhysAddr {
     pub fn add(&self, another: usize) -> PhysAddr {
         PhysAddr(self.0 + another)
     }
+    pub fn get(&self) -> usize {
+        self.0
+    }
 }
 
 #[repr(C)]
@@ -90,6 +98,9 @@ impl VirtualAddr{
     }
     pub fn add(&self, another: usize) -> VirtualAddr {
         VirtualAddr(self.0 + another)
+    }
+    pub fn set(&mut self, value:usize){
+        self.0= value;
     }
     pub unsafe fn to_pa(&self, pagetable: &mut PageTable) -> Option<PhysAddr> {
         let mut pgt = pagetable as * mut PageTable;

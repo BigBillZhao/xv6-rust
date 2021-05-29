@@ -14,7 +14,7 @@ impl PageTable {
     pub unsafe fn map_pages(
         &mut self, va: VirtualAddr, pa: PhysAddr, size: usize, perm: PteFlag
     ) -> Result<(), &'static str> {
-        if pa.get_self() % PGSIZE != 0 {
+        if ! pa.is_aligned() {
             panic!();
         }
         let mut va_iter: usize = va.round_down();
@@ -31,6 +31,22 @@ impl PageTable {
             pa_iter = pa_iter.add(PGSIZE); 
         }
         Ok(())
+    }
+    pub unsafe fn recursive_free(&mut self) {
+        for i in (0..512) {
+            let pte = self.data[i];
+            if pte.is_valid() && (
+                pte.get() & (PteFlag::R.bits()|PteFlag::W.bits()|PteFlag::X.bits()) == 0
+            ) {
+                let pchild: *mut PageTable = pte.to_pagetable();
+                (*pchild).recursive_free();
+                self.data[i].set(0);
+            } else if pte.is_valid() {
+                panic!();
+            }
+        }
+        let ppa = self as * mut PageTable;
+        drop(Box::from_raw(ppa));
     }
     pub fn as_satp(&self) -> usize {
         SATP_SV39 | ((self.data.as_ptr() as usize) >> PGSHIFT)
