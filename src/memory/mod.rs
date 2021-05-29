@@ -10,7 +10,7 @@ use alloc::boxed::Box;
 
 use crate::register::satp;
 use crate::consts::{PGSIZE, PGSHIFT, SV39FLAGLEN, SATP_SV39, PGMASKLEN, PGMASK};
-use crate::consts::{UART0, VIRTIO0, PLIC, PLIC_SIZE, KERNBASE, PHYSTOP, TRAMPOLINE};
+use crate::consts::{UART0, VIRTIO0, PLIC, PLIC_SIZE, KERNBASE, PHYSTOP, TRAMPOLINE, NPROC};
 
 static mut KERNEL_PAGETABLE: PageTable = PageTable::new();
 
@@ -71,7 +71,16 @@ pub unsafe fn kvminit() {
         PGSIZE,
         PteFlag::R | PteFlag::X
     );
-    println!("TODO: proc_mapstack");
+    println!("proc_mapstacks: ");
+    for i in 0..NPROC {
+        let pa: Box<PageTable> = unsafe { Box::new_zeroed().assume_init() };
+        KERNEL_PAGETABLE.map_pages(
+            VirtualAddr::from(KSTACK(i)),
+            PhysAddr::from(Box::into_raw(pa) as usize),
+            PGSIZE,
+            PteFlag::R | PteFlag::W
+        );
+    }
 }
 
 pub unsafe fn kvminithart() {
@@ -96,7 +105,8 @@ unsafe fn walk_alloc(pagetable: &mut PageTable, va: VirtualAddr) -> * mut PTE {
         }
     }
     panic!();
-    // 0 as * mut PTE // NULL
 }
 
-
+pub fn KSTACK(p: usize) -> usize{
+    TRAMPOLINE - ((p + 1) * 2 * PGSIZE)
+}

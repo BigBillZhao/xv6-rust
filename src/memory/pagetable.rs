@@ -20,7 +20,7 @@ impl PageTable {
         let mut va_iter: usize = va.round_down();
         let mut pa_iter: PhysAddr = pa; 
         let addr_end: usize = va.add(size).round_up();
-        println!("map_pages, va = {:#x}, end = {:#x}", va_iter, addr_end);
+        println!("    map_pages, va = {:#x}, end = {:#x}", va_iter, addr_end);
         while va_iter != addr_end {
             let ppte: * mut PTE = walk_alloc(self, VirtualAddr::from(va_iter));
             if (*ppte).is_valid() {

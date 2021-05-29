@@ -8,6 +8,7 @@ pub unsafe fn rust_main() -> ! {
         crate::memory::kalloc::kinit();
         crate::memory::kvminit();
         crate::memory::kvminithart();
+        crate::proc::proc_init();
         panic!();
     } else {
         

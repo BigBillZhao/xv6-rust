@@ -64,7 +64,7 @@ impl Addr for PhysAddr {
     }
 }
 impl PhysAddr {
-    pub fn from(addr: usize) -> PhysAddr {
+    pub const fn from(addr: usize) -> PhysAddr {
         PhysAddr(addr)
     }    
     pub fn add(&self, another: usize) -> PhysAddr {
@@ -85,7 +85,7 @@ impl Addr for VirtualAddr {
     }
 }
 impl VirtualAddr{
-    pub fn from(addr: usize) -> VirtualAddr {
+    pub const fn from(addr: usize) -> VirtualAddr {
         VirtualAddr(addr)
     }
     pub fn add(&self, another: usize) -> VirtualAddr {

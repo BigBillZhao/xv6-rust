@@ -5,8 +5,6 @@ use crate::consts::param::{NPROC,NCPU};
 use crate::consts::vm::PGSIZE;
 use crate::consts::{PTE_V, PTE_R, PTE_W, PTE_X, PTE_U};
 use crate::consts::memlayout::TRAMPOLINE;
-use crate::memory::kalloc::kalloc;
-use crate::memory::vm;
 use crate::register::tp;
 use crate::proc::context::Context;
 use crate::proc::cpu::Cpu;
