@@ -1,16 +1,12 @@
+use crate::register::stvec;
 
-extern "C" {
+pub unsafe fn trap_init_hart() {
     // in kernelvec.S, calls kerneltrap().
     // refered in trapinithalt and usertrap
-    fn kernelvec(); 
-}
-
-pub fn trapinit() {
-
-}
-
-pub fn trapinithalt() {
-
+    extern "C" {
+        fn kernelvec();
+    } 
+    stvec::write(kernelvec as usize);
 }
 
 // handle an interrupt, exception, or system call from user space.
@@ -40,5 +36,5 @@ fn clockintr () {
 // 1 if other device,
 // 0 if not recognized.
 fn devintr() -> usize {
-
+    0
 }

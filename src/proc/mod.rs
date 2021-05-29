@@ -78,8 +78,7 @@ pub unsafe fn proc_init() {
     println!("process init finished!");
 }
 
-/// cpuid() has already been implemented in `crate::register`
-unsafe fn cpu_id() -> usize{
+pub unsafe fn cpu_id() -> usize{
     tp::read()
 }
 

@@ -17,8 +17,8 @@ extern crate alloc;
 
 global_asm!(include_str!("asm/entry.S"));
 global_asm!(include_str!("asm/trampoline.S"));
-// global_asm!(include_str!("asm/kernelvec.S"));
-// global_asm!(include_str!("asm/swtch.S"));
+global_asm!(include_str!("asm/kernelvec.S"));
+global_asm!(include_str!("asm/swtch.S"));
 
 #[macro_use]
 mod print;
@@ -29,3 +29,5 @@ mod rmain;
 mod start;
 mod memory;
 mod proc;
+mod plic;
+mod trap;

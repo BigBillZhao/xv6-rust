@@ -96,9 +96,10 @@ pub mod tp {
         llvm_asm!("mv tp, $0"::"r"(tp)::"volatile");
     }
 }
-/// flush the TLB.
-/// used in vm.rs
-pub unsafe fn sfence_vma() {
-    // the zero, zero means flush all TLB entries.
-    llvm_asm!("sfence.vma zero, zero"::::"volatile");
+
+/// stvec
+pub mod stvec {
+    pub unsafe fn write(stvec: usize) {
+        llvm_asm!("csrw stvec, $0"::"r"(stvec)::"volatile");
+    }
 }
