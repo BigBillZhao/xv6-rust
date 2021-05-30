@@ -1,6 +1,7 @@
 use crate::register::stvec;
-use crate::register::{sstatus,scause,sepc};
-use crate::proc::{ProcState,my_proc_index,yield_proc,proc_list};
+use crate::register::{sstatus, scause, sepc, sip};
+use crate::proc::{ProcState, my_proc_index, yield_proc, proc_list, cpu_id};
+use crate::plic::plic_claim;
 use spin::Mutex;
 
 static TICKS: Mutex<usize> = Mutex::new(0);
@@ -55,9 +56,8 @@ pub unsafe extern "C" fn kerneltrap() {
     sstatus::write(sstatus);
 }
 
-fn clockintr () {
+fn clockintr() {
     let mut _ticks = *(TICKS.lock());
-    println!("timer interrupt tick = {}", _ticks);
     _ticks += 1;
     drop(_ticks);
 }
@@ -67,6 +67,20 @@ fn clockintr () {
 // returns 2 if timer interrupt,
 // 1 if other device,
 // 0 if not recognized.
-fn devintr() -> usize {
-    2
+unsafe fn devintr() -> usize {
+    let scause = scause::read();
+
+    if (scause & 0x8000000000000000 != 0) && (scause & 0xff) == 9 {
+        let irq = plic_claim();
+        println!("interrupt irq is {}", irq);
+        return 1;
+    } else if scause == 0x8000000000000001 {
+        if cpu_id() == 0 {
+            clockintr();
+        }
+        let old = sip::read();
+        sip::write(old & !2);
+        return 2;
+    }
+    0
 }

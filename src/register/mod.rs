@@ -3,6 +3,7 @@ pub mod sstatus;
 pub mod clint;
 pub mod mie;
 pub mod mstatus;
+pub mod sip;
 
 /// mepc
 pub mod mepc {
